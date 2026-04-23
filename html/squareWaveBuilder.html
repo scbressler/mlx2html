@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Square Wave Builder</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=DM+Sans:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #0b0d11;
+    --panel: #13161d;
+    --border: #1e2330;
+    --accent: #00e5b0;
+    --accent2: #6c63ff;
+    --muted: #3a4060;
+    --text: #e4e8f0;
+    --text-dim: #7880a0;
+    --harm: rgba(120, 140, 200, 0.45);
+    --wave: #00e5b0;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 32px 20px 48px;
+  }
+
+  /* Subtle grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,229,176,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,229,176,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 820px;
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 36px;
+  }
+
+  .header h1 {
+    font-family: 'Space Mono', monospace;
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .header h1 span {
+    color: var(--accent);
+  }
+
+  .header-sub {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+
+  /* Intro cards */
+  .intro {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+
+  @media (max-width: 560px) { .intro { grid-template-columns: 1fr; } }
+
+  .info-card {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    font-size: 13.5px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .info-card.wide {
+    grid-column: span 2;
+  }
+
+  @media (max-width: 560px) { .info-card.wide { grid-column: span 1; } }
+
+  /* Controls panel */
+  .controls-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 20px;
+  }
+
+  .controls-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+  }
+
+  .controls-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 32px;
+  }
+
+  @media (max-width: 560px) { .controls-grid { grid-template-columns: 1fr; } }
+
+  .control-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .control-label {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+  }
+
+  .control-label span:first-child {
+    font-size: 13px;
+    color: var(--text-dim);
+    font-family: 'Space Mono', monospace;
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .control-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+  }
+
+  .control-value .unit {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-left: 3px;
+  }
+
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 4px;
+    background: var(--muted);
+    border-radius: 2px;
+    outline: none;
+    cursor: pointer;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px rgba(0,229,176,0.5);
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+  }
+
+  input[type="range"]::-webkit-slider-thumb:hover {
+    box-shadow: 0 0 18px rgba(0,229,176,0.8);
+  }
+
+  input[type="range"]::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 10px rgba(0,229,176,0.5);
+    cursor: pointer;
+  }
+
+  .controls-bottom {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    flex-wrap: wrap;
+  }
+
+  .domain-select {
+    display: flex;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    flex: 1;
+    min-width: 240px;
+  }
+
+  .domain-btn {
+    flex: 1;
+    padding: 10px 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    background: transparent;
+    color: var(--text-dim);
+    border: none;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .domain-btn.active {
+    background: var(--accent2);
+    color: #fff;
+  }
+
+  .domain-btn:first-child { border-right: 1px solid var(--border); }
+
+  .plot-btn {
+    padding: 10px 24px;
+    font-family: 'Space Mono', monospace;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    background: var(--accent);
+    color: #0b0d11;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .plot-btn:hover {
+    background: #00ffca;
+    box-shadow: 0 0 20px rgba(0,229,176,0.4);
+  }
+
+  .plot-btn:active { transform: scale(0.97); }
+
+  /* Chart area */
+  .chart-panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 20px 20px;
+  }
+
+  .chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 0 4px;
+  }
+
+  .chart-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .chart-legend {
+    display: flex;
+    gap: 16px;
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+  }
+
+  .legend-dot {
+    display: inline-block;
+    width: 10px;
+    height: 3px;
+    border-radius: 2px;
+    margin-right: 5px;
+    vertical-align: middle;
+  }
+
+  .chart-wrap {
+    position: relative;
+    height: 320px;
+  }
+
+  /* Gibbs annotation */
+  .annotation {
+    font-family: 'Space Mono', monospace;
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: rgba(108,99,255,0.08);
+    border-left: 2px solid var(--accent2);
+    border-radius: 0 6px 6px 0;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <div class="header">
+    <h1>Square Wave <span>Builder</span></h1>
+    <div class="header-sub">Fourier Series Visualization</div>
+  </div>
+
+  <div class="intro">
+    <div class="info-card">
+      The <strong style="color:var(--text)">square wave</strong> is a special waveform common in electronics and signal processing. In music, it's one of the fundamental oscillators used in subtractive synthesis.
+    </div>
+    <div class="info-card">
+      A square wave is built from the sum of <strong style="color:var(--text)">infinitely many odd-integer harmonics</strong> — scaled sinusoids at frequencies f, 3f, 5f, 7f… This is Fourier decomposition in action.
+    </div>
+    <div class="info-card wide">
+      Use the sliders to set the <strong style="color:var(--accent)">fundamental frequency</strong> and <strong style="color:var(--accent)">number of harmonics</strong>. Watch the square wave take shape as harmonics accumulate. Switch to Frequency Domain to see the spectral content. Hit <strong style="color:var(--text)">Plot It</strong> to render.
+    </div>
+  </div>
+
+  <div class="controls-panel">
+    <div class="controls-title">// Parameters</div>
+    <div class="controls-grid">
+      <div class="control-group">
+        <div class="control-label">
+          <span>Fundamental Frequency</span>
+          <span class="control-value" id="freqDisplay">1<span class="unit">Hz</span></span>
+        </div>
+        <input type="range" id="freqSlider" min="1" max="6" step="1" value="1">
+      </div>
+      <div class="control-group">
+        <div class="control-label">
+          <span>Number of Harmonics</span>
+          <span class="control-value" id="harmDisplay">11</span>
+        </div>
+        <input type="range" id="harmSlider" min="1" max="30" step="1" value="11">
+      </div>
+    </div>
+
+    <div class="controls-bottom">
+      <div class="domain-select">
+        <button class="domain-btn active" id="btnTime" onclick="setDomain('time')">Time Domain</button>
+        <button class="domain-btn" id="btnFreq" onclick="setDomain('freq')">Frequency Domain</button>
+      </div>
+      <button class="plot-btn" onclick="plotWave()">Plot It →</button>
+    </div>
+  </div>
+
+  <div class="chart-panel">
+    <div class="chart-header">
+      <span class="chart-title" id="chartTitle">1-Hz Square Wave (11 harmonics)</span>
+      <div class="chart-legend" id="chartLegend">
+        <span><span class="legend-dot" style="background:rgba(120,140,200,0.6)"></span>Harmonics</span>
+        <span><span class="legend-dot" style="background:#00e5b0"></span>Square Wave</span>
+      </div>
+    </div>
+    <div class="chart-wrap">
+      <canvas id="waveChart"></canvas>
+    </div>
+    <div class="annotation" id="annotation">
+      <strong style="color:var(--text-dim)">Gibbs Phenomenon:</strong> Notice the overshoot (~9%) at each edge transition — this artifact persists regardless of how many harmonics are added and is a fundamental property of Fourier series near discontinuities.
+    </div>
+  </div>
+
+</div>
+
+<script>
+// State
+let domain = 'time';
+let chart = null;
+
+const freqSlider = document.getElementById('freqSlider');
+const harmSlider = document.getElementById('harmSlider');
+const freqDisplay = document.getElementById('freqDisplay');
+const harmDisplay = document.getElementById('harmDisplay');
+
+freqSlider.addEventListener('input', () => {
+  freqDisplay.innerHTML = freqSlider.value + '<span class="unit">Hz</span>';
+});
+harmSlider.addEventListener('input', () => {
+  harmDisplay.textContent = harmSlider.value;
+});
+
+function setDomain(d) {
+  domain = d;
+  document.getElementById('btnTime').classList.toggle('active', d === 'time');
+  document.getElementById('btnFreq').classList.toggle('active', d === 'freq');
+  document.getElementById('chartLegend').style.display = d === 'time' ? 'flex' : 'none';
+  document.getElementById('annotation').style.display = d === 'time' ? 'block' : 'none';
+}
+
+// Core math
+function buildWave(f, K, fs, dur) {
+  const N = Math.round(fs * dur) + 1;
+  const t = Array.from({length: N}, (_, i) => i / fs);
+  const harmonics = [];
+  for (let k = 1; k <= K; k++) {
+    const col = t.map(ti => (4 / Math.PI) * (1 / (2*k - 1)) * Math.sin(2 * Math.PI * (2*k - 1) * f * ti));
+    harmonics.push(col);
+  }
+  const sum = t.map((_, i) => harmonics.reduce((acc, h) => acc + h[i], 0));
+  return {t, harmonics, sum, N};
+}
+
+function computeFFT(signal) {
+  // Radix-2 Cooley-Tukey FFT
+  const n = signal.length;
+  // Zero-pad to next power of 2
+  let size = 1;
+  while (size < n) size <<= 1;
+  const re = new Float64Array(size);
+  const im = new Float64Array(size);
+  for (let i = 0; i < n; i++) re[i] = signal[i];
+
+  // bit-reversal
+  for (let i = 1, j = 0; i < size; i++) {
+    let bit = size >> 1;
+    for (; j & bit; bit >>= 1) j ^= bit;
+    j ^= bit;
+    if (i < j) {
+      [re[i], re[j]] = [re[j], re[i]];
+      [im[i], im[j]] = [im[j], im[i]];
+    }
+  }
+  // Butterfly
+  for (let len = 2; len <= size; len <<= 1) {
+    const wRe = Math.cos(-2 * Math.PI / len);
+    const wIm = Math.sin(-2 * Math.PI / len);
+    for (let i = 0; i < size; i += len) {
+      let curRe = 1, curIm = 0;
+      for (let j = 0; j < len >> 1; j++) {
+        const uRe = re[i+j], uIm = im[i+j];
+        const vRe = re[i+j+len/2]*curRe - im[i+j+len/2]*curIm;
+        const vIm = re[i+j+len/2]*curIm + im[i+j+len/2]*curRe;
+        re[i+j] = uRe + vRe; im[i+j] = uIm + vIm;
+        re[i+j+len/2] = uRe - vRe; im[i+j+len/2] = uIm - vIm;
+        const newRe = curRe*wRe - curIm*wIm;
+        curIm = curRe*wIm + curIm*wRe;
+        curRe = newRe;
+      }
+    }
+  }
+  const mag = Array.from({length: size}, (_, i) => Math.sqrt(re[i]*re[i] + im[i]*im[i]) / n);
+  return {mag, size};
+}
+
+function plotWave() {
+  const f = parseInt(freqSlider.value);
+  const K = parseInt(harmSlider.value);
+  const fs = 1000;
+  const dur = 1;
+
+  document.getElementById('chartTitle').textContent = `${f}-Hz Square Wave (${K} harmonic${K === 1 ? '' : 's'})`;
+
+  if (domain === 'time') {
+    plotTimeDomain(f, K, fs, dur);
+  } else {
+    plotFreqDomain(f, K, fs, dur);
+  }
+}
+
+function plotTimeDomain(f, K, fs, dur) {
+  const {t, harmonics, sum} = buildWave(f, K, fs, dur);
+
+  // Subsample for performance
+  const step = Math.max(1, Math.floor(t.length / 500));
+  const tSub = t.filter((_, i) => i % step === 0);
+  const sumSub = sum.filter((_, i) => i % step === 0);
+  const harmSub = harmonics.map(h => h.filter((_, i) => i % step === 0));
+
+  const datasets = harmSub.map((h, idx) => ({
+    label: `H${idx+1}`,
+    data: tSub.map((x, i) => ({x, y: h[i]})),
+    borderColor: 'rgba(120,140,200,0.35)',
+    borderWidth: 1,
+    pointRadius: 0,
+    tension: 0,
+    fill: false,
+    order: 2
+  }));
+
+  datasets.push({
+    label: 'Square Wave',
+    data: tSub.map((x, i) => ({x, y: sumSub[i]})),
+    borderColor: '#00e5b0',
+    borderWidth: 2.5,
+    pointRadius: 0,
+    tension: 0,
+    fill: false,
+    order: 1
+  });
+
+  renderChart(datasets, {
+    xLabel: 'Time (seconds)',
+    yLabel: 'Amplitude',
+    xMin: 0, xMax: dur,
+    yMin: -1.4, yMax: 1.4
+  });
+}
+
+function plotFreqDomain(f, K, fs, dur) {
+  const {sum, N} = buildWave(f, K, fs, dur);
+  const {mag, size} = computeFFT(sum);
+
+  // Build frequency axis (only first half, only up to relevant range)
+  const freqMax = f * (2 * (K + 1) - 1);
+  const freqRes = fs / size;
+  const points = [];
+  for (let i = 0; i < size / 2; i++) {
+    const freq = i * freqRes;
+    if (freq > freqMax + f) break;
+    if (mag[i] > 1e-6) points.push({x: freq, y: mag[i]});
+  }
+
+  const datasets = [{
+    label: 'Magnitude',
+    data: points,
+    borderColor: '#6c63ff',
+    backgroundColor: 'rgba(108,99,255,0.5)',
+    borderWidth: 2,
+    pointRadius: 5,
+    pointBackgroundColor: '#6c63ff',
+    pointHoverRadius: 7,
+    showLine: false,
+    order: 1
+  }];
+
+  // Stem lines
+  const stemDatasets = points.map(p => ({
+    label: '',
+    data: [{x: p.x, y: 0}, {x: p.x, y: p.y}],
+    borderColor: 'rgba(108,99,255,0.4)',
+    borderWidth: 1.5,
+    pointRadius: 0,
+    showLine: true,
+    fill: false,
+    order: 2
+  }));
+
+  renderChart([...stemDatasets, ...datasets], {
+    xLabel: 'Frequency (Hz)',
+    yLabel: 'Magnitude',
+    xMin: 0, xMax: freqMax + f * 0.5,
+    yMin: 0, yMax: null
+  }, false);
+}
+
+function renderChart(datasets, axes, showGridY = true) {
+  if (chart) chart.destroy();
+
+  const ctx = document.getElementById('waveChart').getContext('2d');
+
+  chart = new Chart(ctx, {
+    type: 'scatter',
+    data: {datasets},
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: {duration: 300},
+      plugins: {
+        legend: {display: false},
+        tooltip: {
+          callbacks: {
+            label: ctx => `${ctx.parsed.x.toFixed(3)}, ${ctx.parsed.y.toFixed(4)}`
+          },
+          backgroundColor: '#13161d',
+          borderColor: '#1e2330',
+          borderWidth: 1,
+          titleColor: '#7880a0',
+          bodyColor: '#e4e8f0',
+          bodyFont: {family: 'Space Mono', size: 11}
+        }
+      },
+      scales: {
+        x: {
+          type: 'linear',
+          min: axes.xMin,
+          max: axes.xMax,
+          title: {
+            display: true,
+            text: axes.xLabel,
+            color: '#7880a0',
+            font: {family: 'Space Mono', size: 11}
+          },
+          grid: {color: 'rgba(255,255,255,0.04)'},
+          ticks: {color: '#7880a0', font: {family: 'Space Mono', size: 10}},
+          border: {color: '#1e2330'}
+        },
+        y: {
+          min: axes.yMin ?? undefined,
+          max: axes.yMax ?? undefined,
+          title: {
+            display: true,
+            text: axes.yLabel,
+            color: '#7880a0',
+            font: {family: 'Space Mono', size: 11}
+          },
+          grid: {color: showGridY ? 'rgba(255,255,255,0.04)' : 'rgba(255,255,255,0.04)'},
+          ticks: {color: '#7880a0', font: {family: 'Space Mono', size: 10}},
+          border: {color: '#1e2330'}
+        }
+      }
+    }
+  });
+}
+
+// Initial plot
+plotWave();
+</script>
+</body>
+</html>
